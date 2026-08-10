@@ -114,6 +114,17 @@ if(ATRAC_GLITCH_BUILD_TESTS)
     target_compile_features(AtracGlitchRealtimeTests PRIVATE cxx_std_20)
     add_test(NAME AtracGlitch.Realtime COMMAND AtracGlitchRealtimeTests)
 
+    find_program(ATRAC_GLITCH_FFMPEG_EXECUTABLE ffmpeg)
+    if(ATRAC_GLITCH_FFMPEG_EXECUTABLE)
+        add_executable(AtracGlitchFFmpegInteropTests Tests/FFmpegInteropTests.cpp)
+        target_link_libraries(AtracGlitchFFmpegInteropTests PRIVATE AtracGlitchCore)
+        target_compile_features(AtracGlitchFFmpegInteropTests PRIVATE cxx_std_20)
+        target_compile_definitions(AtracGlitchFFmpegInteropTests PRIVATE
+            FFMPEG_EXECUTABLE="${ATRAC_GLITCH_FFMPEG_EXECUTABLE}"
+        )
+        add_test(NAME AtracGlitch.Interop.FFmpeg COMMAND AtracGlitchFFmpegInteropTests)
+    endif()
+
     if(APPLE AND ATRAC_GLITCH_BUILD_PLUGIN)
         add_test(NAME AtracGlitch.Host.VST3
             COMMAND AtracGlitchPluginLoadTests
