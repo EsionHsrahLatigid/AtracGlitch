@@ -1,0 +1,14 @@
+.DS_Store
+.omx/
+build*/
+cmake-build-*/
+CMakeUserPresets.json
+*.jucer
+*.xcodeproj/
+*.xcworkspace/
+*.vst3/
+*.component/
+*.app/
+*.log
+__pycache__/
+*.pyc
