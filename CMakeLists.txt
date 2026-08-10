@@ -88,6 +88,7 @@ if(ATRAC_GLITCH_BUILD_PLUGIN)
             PRODUCT_NAME "ATRAC Glitch Plugin Load Tests"
         )
         target_sources(AtracGlitchPluginLoadTests PRIVATE Tests/PluginLoadTests.cpp)
+        target_include_directories(AtracGlitchPluginLoadTests PRIVATE "${CMAKE_CURRENT_SOURCE_DIR}/Source")
         target_link_libraries(AtracGlitchPluginLoadTests PRIVATE
             juce::juce_audio_processors_headless
             juce::juce_recommended_config_flags

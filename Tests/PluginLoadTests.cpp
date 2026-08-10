@@ -1,3 +1,5 @@
+#include "DSP/AtracGlitchEngine.h"
+
 #include <juce_audio_processors_headless/juce_audio_processors_headless.h>
 
 #include <algorithm>
@@ -61,9 +63,9 @@ int main(int argc, char** argv)
         return 6;
     }
     instance->prepareToPlay(48000.0, 128);
-    if(instance->getLatencySamples() != 512)
+    if(instance->getLatencySamples() != atracglitch::AtracGlitchEngine::latencySamples)
     {
-        std::cerr << "hosted latency contract is not 512 samples\n";
+        std::cerr << "hosted latency contract does not match the engine\n";
         return 7;
     }
 

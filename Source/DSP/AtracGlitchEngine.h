@@ -31,7 +31,8 @@ class AtracGlitchEngine
 {
 public:
     static constexpr int maxChannels = 2;
-    static constexpr int latencySamples = static_cast<int>(samplesPerFrame);
+    static constexpr int codecDelaySamples = 266;
+    static constexpr int latencySamples = static_cast<int>(samplesPerFrame) + codecDelaySamples;
 
     void prepare(double sampleRate, int maximumBlockSize, int channels) noexcept;
     void reset() noexcept;
@@ -55,16 +56,17 @@ private:
 
     void renderFrame(const Parameters& parameters, int channels) noexcept;
 
-    AtracCodec codec;
+    std::array<AtracCodec, maxChannels> codecs;
     std::array<std::array<float, samplesPerFrame>, maxChannels> inputFrames {};
     std::array<std::array<float, samplesPerFrame>, maxChannels> wetFrames {};
     std::array<std::array<float, samplesPerFrame>, maxChannels> dryFrames {};
+    std::array<std::array<float, codecDelaySamples>, maxChannels> dryDelay {};
     std::array<EncodedFrame, maxChannels> previousFrames {};
     std::array<bool, maxChannels> hasPrevious {};
     std::array<std::uint32_t, maxChannels> randomStates { 1u, 0x9e3779b9u };
     std::size_t framePosition = 0;
+    std::size_t dryDelayPosition = 0;
     std::uint32_t activeSeed = 1;
     int preparedChannels = 2;
 };
 } // namespace atracglitch
-

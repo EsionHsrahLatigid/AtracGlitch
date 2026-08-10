@@ -31,11 +31,6 @@ std::array<float, atracglitch::samplesPerFrame> makeSignal()
     return signal;
 }
 
-float energy(const std::array<float, atracglitch::samplesPerFrame>& signal)
-{
-    return std::inner_product(signal.begin(), signal.end(), signal.begin(), 0.0f);
-}
-
 bool testBitPacking()
 {
     atracglitch::EncodedFrame frame;
@@ -51,9 +46,29 @@ bool testBitPacking()
 bool testCodecRoundTrip()
 {
     atracglitch::AtracCodec codec;
+    constexpr std::size_t frameCount = 8;
+    std::array<float, atracglitch::samplesPerFrame * frameCount> source {};
+    std::array<float, atracglitch::samplesPerFrame * frameCount> decoded {};
+    for(std::size_t i = 0; i < source.size(); ++i)
+    {
+        const auto t = static_cast<float>(i) / 44100.0f;
+        source[i] = 0.55f * std::sin(2.0f * 3.14159265358979323846f * 440.0f * t)
+                  + 0.20f * std::sin(2.0f * 3.14159265358979323846f * 3100.0f * t);
+    }
+
     atracglitch::EncodedFrame frame;
-    const auto source = makeSignal();
-    codec.encode(source, 1.0f, frame);
+    for(std::size_t frameIndex = 0; frameIndex < frameCount; ++frameIndex)
+    {
+        std::array<float, atracglitch::samplesPerFrame> inputFrame {};
+        std::array<float, atracglitch::samplesPerFrame> outputFrame {};
+        std::copy_n(source.begin() + static_cast<std::ptrdiff_t>(frameIndex * atracglitch::samplesPerFrame),
+                    atracglitch::samplesPerFrame,
+                    inputFrame.begin());
+        codec.encode(inputFrame, 1.0f, frame);
+        codec.decode(frame, outputFrame);
+        std::copy(outputFrame.begin(), outputFrame.end(),
+                  decoded.begin() + static_cast<std::ptrdiff_t>(frameIndex * atracglitch::samplesPerFrame));
+    }
 
     const auto layout = atracglitch::AtracCodec::inspect(frame);
     bool ok = true;
@@ -63,15 +78,20 @@ bool testCodecRoundTrip()
     ok &= expect(layout.spectrumEnd <= static_cast<int>(atracglitch::soundUnitBytes * 8),
                  "encoded spectrum exceeded a 212-byte Sound Unit");
 
-    std::array<float, atracglitch::samplesPerFrame> decoded {};
-    codec.decode(frame, decoded);
     ok &= expect(std::all_of(decoded.begin(), decoded.end(), [](const float value) { return std::isfinite(value); }),
-                 "decoded frame contains a non-finite sample");
-    ok &= expect(energy(decoded) > 0.01f, "decoded frame unexpectedly contains silence");
+                 "decoded stream contains a non-finite sample");
 
-    const auto dot = std::inner_product(source.begin(), source.end(), decoded.begin(), 0.0f);
-    const auto correlation = dot / std::sqrt(std::max(1.0e-20f, energy(source) * energy(decoded)));
-    ok &= expect(correlation > 0.75f, "clean codec round-trip lost signal correlation");
+    constexpr auto delay = static_cast<std::size_t>(atracglitch::AtracGlitchEngine::codecDelaySamples);
+    const auto compared = source.size() - delay;
+    const auto sourceEnergy = std::inner_product(source.begin(), source.begin() + static_cast<std::ptrdiff_t>(compared),
+                                                  source.begin(), 0.0f);
+    const auto decodedEnergy = std::inner_product(decoded.begin() + static_cast<std::ptrdiff_t>(delay), decoded.end(),
+                                                   decoded.begin() + static_cast<std::ptrdiff_t>(delay), 0.0f);
+    const auto dot = std::inner_product(source.begin(), source.begin() + static_cast<std::ptrdiff_t>(compared),
+                                        decoded.begin() + static_cast<std::ptrdiff_t>(delay), 0.0f);
+    const auto correlation = dot / std::sqrt(std::max(1.0e-20f, sourceEnergy * decodedEnergy));
+    ok &= expect(decodedEnergy > 0.01f, "decoded stream unexpectedly contains silence");
+    ok &= expect(correlation > 0.98f, "clean ATRAC1 round-trip lost delay-compensated correlation");
     return ok;
 }
 
@@ -145,7 +165,7 @@ bool testEngineLatencyAndSafety()
     atracglitch::AtracGlitchEngine engine;
     engine.prepare(48000.0, 127, 2);
 
-    constexpr int totalSamples = 1536;
+    constexpr int totalSamples = 2048;
     std::array<std::vector<float>, 2> input {
         std::vector<float>(totalSamples), std::vector<float>(totalSamples)
     };
@@ -174,12 +194,12 @@ bool testEngineLatencyAndSafety()
     }
 
     bool ok = true;
-    ok &= expect(std::all_of(output[0].begin(), output[0].begin() + 512,
+    ok &= expect(std::all_of(output[0].begin(), output[0].begin() + atracglitch::AtracGlitchEngine::latencySamples,
                              [](const float value) { return value == 0.0f; }),
-                 "engine emitted audio before its declared 512-sample latency");
-    ok &= expect(std::abs(output[0][512] - 0.5f) < 1.0e-6f,
+                 "engine emitted dry audio before its declared latency");
+    ok &= expect(std::abs(output[0][atracglitch::AtracGlitchEngine::latencySamples] - 0.5f) < 1.0e-6f,
                  "delayed dry path did not preserve the left impulse");
-    ok &= expect(std::abs(output[1][512] + 0.25f) < 1.0e-6f,
+    ok &= expect(std::abs(output[1][atracglitch::AtracGlitchEngine::latencySamples] + 0.25f) < 1.0e-6f,
                  "delayed dry path did not preserve the right impulse");
     ok &= expect(std::all_of(output[0].begin(), output[0].end(), [](const float value) { return std::isfinite(value); }),
                  "engine output contains a non-finite sample");

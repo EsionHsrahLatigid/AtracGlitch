@@ -29,11 +29,13 @@ class AtracCodec
 public:
     AtracCodec();
 
+    void reset() noexcept;
+
     void encode(const std::array<float, samplesPerFrame>& input,
                 float bandwidth,
-                EncodedFrame& output) const noexcept;
+                EncodedFrame& output) noexcept;
     void decode(const EncodedFrame& input,
-                std::array<float, samplesPerFrame>& output) const noexcept;
+                std::array<float, samplesPerFrame>& output) noexcept;
 
     static FrameLayout inspect(const EncodedFrame& frame) noexcept;
     static int getBits(const EncodedFrame& frame, int bitPosition, int bitCount) noexcept;
@@ -41,12 +43,18 @@ public:
     static void flipBit(EncodedFrame& frame, int bitPosition) noexcept;
 
 private:
-    using TransformTable = std::array<float, samplesPerFrame * samplesPerFrame>;
+    std::array<float, samplesPerFrame + 46> analysisFirst {};
+    std::array<float, samplesPerFrame / 2 + 46> analysisSecond {};
+    std::array<float, samplesPerFrame / 2 + 39> analysisHighDelay {};
+    std::array<float, 32> encodeLowTail {};
+    std::array<float, 32> encodeMidTail {};
+    std::array<float, 32> encodeHighTail {};
 
-    void transform(const std::array<float, samplesPerFrame>& input,
-                   std::array<float, samplesPerFrame>& output) const noexcept;
-
-    TransformTable transformTable {};
+    std::array<float, samplesPerFrame + 46> synthesisFirst {};
+    std::array<float, samplesPerFrame / 2 + 46> synthesisSecond {};
+    std::array<float, samplesPerFrame / 2 + 39> synthesisHighDelay {};
+    std::array<float, 16> decodeLowOverlap {};
+    std::array<float, 16> decodeMidOverlap {};
+    std::array<float, 16> decodeHighOverlap {};
 };
 } // namespace atracglitch
-

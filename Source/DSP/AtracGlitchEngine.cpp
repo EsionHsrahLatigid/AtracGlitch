@@ -28,11 +28,16 @@ void AtracGlitchEngine::reset() noexcept
         frame.fill(0.0f);
     for(auto& frame : dryFrames)
         frame.fill(0.0f);
+    for(auto& delay : dryDelay)
+        delay.fill(0.0f);
     for(auto& frame : previousFrames)
         frame.bytes.fill(0);
+    for(auto& codec : codecs)
+        codec.reset();
 
     hasPrevious.fill(false);
     framePosition = 0;
+    dryDelayPosition = 0;
     randomStates[0] = activeSeed == 0 ? 1u : activeSeed;
     randomStates[1] = randomStates[0] ^ 0x9e3779b9u;
 }
@@ -63,7 +68,10 @@ void AtracGlitchEngine::process(float* const* outputs,
                              ? sanitize(inputs[channel][sample]) : 0.0f;
             inputFrames[static_cast<std::size_t>(channel)][framePosition] = input;
 
-            const auto dry = dryFrames[static_cast<std::size_t>(channel)][framePosition];
+            const auto frameDry = dryFrames[static_cast<std::size_t>(channel)][framePosition];
+            auto& delayedDry = dryDelay[static_cast<std::size_t>(channel)][dryDelayPosition];
+            const auto dry = delayedDry;
+            delayedDry = frameDry;
             const auto wet = wetFrames[static_cast<std::size_t>(channel)][framePosition];
             auto output = (dry + (wet - dry) * mix) * gain;
             if(mix > 0.0f)
@@ -72,6 +80,7 @@ void AtracGlitchEngine::process(float* const* outputs,
         }
 
         ++framePosition;
+        dryDelayPosition = (dryDelayPosition + 1) % codecDelaySamples;
         if(framePosition == samplesPerFrame)
         {
             renderFrame(parameters, channelsToProcess);
@@ -85,6 +94,7 @@ void AtracGlitchEngine::renderFrame(const Parameters& parameters, const int chan
     for(int channel = 0; channel < channels; ++channel)
     {
         auto encoded = EncodedFrame {};
+        auto& codec = codecs[static_cast<std::size_t>(channel)];
         codec.encode(inputFrames[static_cast<std::size_t>(channel)], parameters.bandwidth, encoded);
 
         if(parameters.mode == GlitchMode::freeze)
@@ -198,4 +208,3 @@ float AtracGlitchEngine::protectOutput(const float sample) noexcept
     return std::copysign(1.0f + 0.25f * std::tanh(std::abs(safe) - 1.0f), safe);
 }
 } // namespace atracglitch
-
