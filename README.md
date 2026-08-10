@@ -10,6 +10,8 @@ dependency-free DSP core and does not launch FFmpeg from the audio thread.
 ## What is implemented
 
 - 512 samples per frame and 212 bytes per channel Sound Unit
+- Stateful 48-tap cascaded QMF analysis/synthesis for the three ATRAC1 bands
+- ATRAC1 long-block MDCT/IMDCT, 32-sample overlap windows, and band reversal
 - The ATRAC1 20..52 BFU layouts used by FFmpeg
 - 4-bit word-length indices and 6-bit scale-factor indices
 - MSB-first variable-width signed coefficient packing
@@ -17,12 +19,12 @@ dependency-free DSP core and does not launch FFmpeg from the audio thread.
 - Deterministic mutation from a user-visible seed
 - Stereo/mono support, latency reporting, delayed dry/wet mix, and bounded output
 
-The encoder is an **ATRAC1-structured real-time model**, not a bit-exact Sony
-ATRAC1 encoder. It uses an orthonormal DCT-IV analysis/synthesis transform while
-preserving the compressed fields targeted by the glitch modes. FFmpeg currently
-ships an ATRAC1 decoder but no ATRAC1 encoder, so a fully interoperable encoder is
-outside this first version. The distinction matters if you intend to exchange
-generated frames with MiniDisc hardware or `.aea` files.
+The encoder now emits ATRAC1 Sound Units that FFmpeg's standard ATRAC1 decoder
+accepts and decodes as correlated, audible PCM. It implements the interoperable
+long-block signal path rather than the earlier whole-frame DCT approximation.
+It is still not a bit-exact Sony encoder: bit allocation is deliberately simple,
+short-block transient switching is not implemented, and MiniDisc hardware
+interchange has not been tested.
 
 ## Parameters
 
@@ -36,8 +38,10 @@ generated frames with MiniDisc hardware or `.aea` files.
 | Output | Output gain in dB before safety limiting |
 | Seed | Reproducible random sequence |
 
-The plug-in reports 512 samples of latency. Malformed scale factors and word
-lengths can create loud peaks, so wet output is bounded; still begin monitoring
+The plug-in reports 778 samples of latency: one 512-sample frame plus the measured
+266-sample ATRAC1 analysis/synthesis delay. The dry path is delayed by the same
+amount. Malformed scale factors and word lengths can create loud peaks, so wet
+output is bounded; still begin monitoring
 at a conservative level.
 
 ## Build
@@ -69,6 +73,7 @@ ctest --test-dir build-core --output-on-failure
 - `Source/DSP/AtracGlitchEngine.*` — mutation, buffering, latency-aligned mix and safety
 - `Source/Plugin/PluginProcessor.*` — JUCE processor, parameters and state
 - `Tests/CoreTests.cpp` — field, codec, mutation, latency and finite-output checks
+- `Tests/FFmpegInteropTests.cpp` — clean/glitched AEA decode checks against FFmpeg
 - `atrac1_glitch.py` — original offline `.aea`/raw ATRAC1 mutation prototype
 - `AGENT_HANDOFF.md` — initial research handoff and follow-up questions
 
@@ -78,4 +83,13 @@ ctest --test-dir build-core --output-on-failure
 - [FFmpeg ATRAC1 data tables](https://github.com/FFmpeg/FFmpeg/blob/master/libavcodec/atrac1data.h)
 - [FFmpeg ATRAC common tables/QMF](https://github.com/FFmpeg/FFmpeg/blob/master/libavcodec/atrac.c)
 - [FFmpeg AEA demuxer](https://github.com/FFmpeg/FFmpeg/blob/master/libavformat/aeadec.c)
+- [AtracDEnc ATRAC1 encoder/decoder](https://github.com/dcherednik/atracdenc)
+- [Sony ATRAC technical overview](https://www.minidisc.org/aes_atrac.html)
 
+## Verified interoperability
+
+With FFmpeg available, CMake enables `AtracGlitch.Interop.FFmpeg`. The test emits
+clean and spectrum-glitched AEA files, decodes them with FFmpeg, and rejects
+silent, uncorrelated, non-finite, low-SNR, or unchanged output. The 2026-08-11
+reference run measured clean RMS `0.414476`, input correlation `0.999784`, SNR
+`33.6247 dB`, and clean-vs-glitched difference RMS `0.128086`.
