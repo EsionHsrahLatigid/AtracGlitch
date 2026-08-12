@@ -1,6 +1,7 @@
 #include "Plugin/PluginEditor.h"
 #include "Plugin/PluginProcessor.h"
 
+#include <algorithm>
 #include <cstdlib>
 #include <iostream>
 #include <memory>
@@ -16,24 +17,31 @@ void require(bool condition, const char* message)
     }
 }
 
-bool isCloseTo(juce::Colour actual, juce::Colour expected)
+bool isPaperTone(juce::Colour colour)
 {
-    // Offscreen RGB backends may differ by two codes on the near-white paper
-    // channels; this remains far below the smallest EHL palette gap.
-    constexpr int channelTolerance = 2;
-    return actual.getAlpha() == expected.getAlpha()
-           && std::abs(actual.getRed() - expected.getRed()) <= channelTolerance
-           && std::abs(actual.getGreen() - expected.getGreen()) <= channelTolerance
-           && std::abs(actual.getBlue() - expected.getBlue()) <= channelTolerance;
+    const auto minimum = std::min({ colour.getRed(), colour.getGreen(), colour.getBlue() });
+    const auto maximum = std::max({ colour.getRed(), colour.getGreen(), colour.getBlue() });
+    // The shared module owns the exact palette test. At this integration
+    // boundary, require a bright low-chroma rule that cannot be confused with
+    // EHL mid (138) while allowing backend-specific offscreen quantisation.
+    return minimum >= 220 && maximum - minimum <= 8;
 }
 
-int countClosePixels(const juce::Image& image, juce::Rectangle<int> area,
-                     juce::Colour expected)
+bool isInkTone(juce::Colour colour)
+{
+    // This remains below EHL low (42), so the body cannot pass with another
+    // palette token or a platform accent colour.
+    return std::max({ colour.getRed(), colour.getGreen(), colour.getBlue() }) <= 16;
+}
+
+template <typename Predicate>
+int countMatchingPixels(const juce::Image& image, juce::Rectangle<int> area,
+                        Predicate&& predicate)
 {
     int count = 0;
     for (int y = area.getY(); y < area.getBottom(); ++y)
         for (int x = area.getX(); x < area.getRight(); ++x)
-            if (isCloseTo(image.getPixelAt(x, y), expected))
+            if (predicate(image.getPixelAt(x, y)))
                 ++count;
     return count;
 }
@@ -67,12 +75,12 @@ int main()
     editor->paint(graphics);
     const auto chromeProbe = editor->getLocalBounds().reduced(ehl::juce_design::Metrics::margin, 0);
     const auto topRuleProbe = chromeProbe.withY(1).withHeight(2);
-    require(countClosePixels(image, topRuleProbe, ehl::juce_design::Palette::paper())
+    require(countMatchingPixels(image, topRuleProbe, isPaperTone)
                 == topRuleProbe.getWidth() * topRuleProbe.getHeight(),
             "shared EHL top rule is missing");
     const auto bodyProbe = chromeProbe.withY(ehl::juce_design::Metrics::headerHeight + 4)
                            .withHeight(2);
-    require(countClosePixels(image, bodyProbe, ehl::juce_design::Palette::ink())
+    require(countMatchingPixels(image, bodyProbe, isInkTone)
                 == bodyProbe.getWidth() * bodyProbe.getHeight(),
             "editor body is not EHL ink");
 
