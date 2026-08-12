@@ -1,0 +1,64 @@
+{
+  "version": 6,
+  "configurePresets": [
+    {
+      "name": "engine-debug",
+      "displayName": "Engine Debug",
+      "generator": "Ninja",
+      "binaryDir": "${sourceDir}/build/engine-debug",
+      "cacheVariables": {
+        "CMAKE_BUILD_TYPE": "Debug",
+        "ATRAC_GLITCH_BUILD_PLUGIN": "OFF",
+        "ATRAC_GLITCH_BUILD_TESTS": "ON"
+      }
+    },
+    {
+      "name": "plugin-release",
+      "displayName": "Plugin Release",
+      "generator": "Ninja",
+      "binaryDir": "${sourceDir}/build/plugin-release",
+      "cacheVariables": {
+        "CMAKE_BUILD_TYPE": "Release",
+        "ATRAC_GLITCH_BUILD_PLUGIN": "ON",
+        "ATRAC_GLITCH_BUILD_TESTS": "ON"
+      }
+    }
+  ],
+  "buildPresets": [
+    {
+      "name": "engine-debug",
+      "configurePreset": "engine-debug",
+      "targets": [
+        "AtracGlitchCoreTests",
+        "AtracGlitchRealtimeTests"
+      ]
+    },
+    {
+      "name": "plugin-release",
+      "configurePreset": "plugin-release",
+      "targets": [
+        "ehl_stage_products",
+        "AtracGlitchCoreTests",
+        "AtracGlitchRealtimeTests",
+        "AtracGlitchPluginLoadTests",
+        "AtracGlitchEditorTests"
+      ]
+    }
+  ],
+  "testPresets": [
+    {
+      "name": "engine-debug",
+      "configurePreset": "engine-debug",
+      "output": {
+        "outputOnFailure": true
+      }
+    },
+    {
+      "name": "plugin-release",
+      "configurePreset": "plugin-release",
+      "output": {
+        "outputOnFailure": true
+      }
+    }
+  ]
+}

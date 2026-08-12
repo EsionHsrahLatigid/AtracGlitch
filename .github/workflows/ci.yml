@@ -1,0 +1,30 @@
+name: CI
+
+on:
+  push:
+    branches: [ main ]
+  pull_request:
+  workflow_dispatch:
+    inputs:
+      force_heavy:
+        description: Run heavy plugin builds for manual dispatch
+        required: false
+        type: boolean
+        default: true
+
+concurrency:
+  group: ci-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  ci:
+    uses: EsionHsrahLatigid/juce-ci/.github/workflows/plugin-ci.yml@926c5bb10335c29503f92869169759ec18d71449
+    permissions:
+      contents: read
+    with:
+      product_name: AtracGlitch
+      product_slug: atracglitch
+      cmake_option_prefix: ATRAC_GLITCH
+      debug_targets_json: '["AtracGlitchCoreTests","AtracGlitchRealtimeTests"]'
+      release_test_targets_json: '["AtracGlitchCoreTests","AtracGlitchRealtimeTests","AtracGlitchPluginLoadTests","AtracGlitchEditorTests"]'
+      windows_debug_plugins: false

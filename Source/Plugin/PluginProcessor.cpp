@@ -1,4 +1,5 @@
 #include "PluginProcessor.h"
+#include "PluginEditor.h"
 
 #include <algorithm>
 #include <cmath>
@@ -70,7 +71,7 @@ void AtracGlitchAudioProcessor::processBlock(juce::AudioBuffer<float>& buffer,
 
 juce::AudioProcessorEditor* AtracGlitchAudioProcessor::createEditor()
 {
-    return new juce::GenericAudioProcessorEditor(*this);
+    return new AtracGlitchAudioProcessorEditor(*this);
 }
 
 void AtracGlitchAudioProcessor::getStateInformation(juce::MemoryBlock& destData)
