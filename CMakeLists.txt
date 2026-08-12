@@ -56,7 +56,7 @@ if(ATRAC_GLITCH_BUILD_PLUGIN)
 
     juce_add_plugin(AtracGlitch
         COMPANY_NAME "2bit"
-        BUNDLE_ID "com.2bit.atracglitch"
+        BUNDLE_ID "jp.ehl.atracglitch"
         PLUGIN_MANUFACTURER_CODE Tbit
         PLUGIN_CODE Atg1
         FORMATS ${ATRAC_GLITCH_FORMATS}
@@ -142,7 +142,7 @@ if(ATRAC_GLITCH_BUILD_PLUGIN)
         COMMAND ${CMAKE_COMMAND}
             -DPRODUCT_NAME=AtracGlitch
             -DSLUG=atracglitch
-            -DBUNDLE_ID=com.2bit.atracglitch
+            -DBUNDLE_ID=jp.ehl.atracglitch
             -DPLUGIN_CODE=Atg1
             -DSTAGE_DIR=${atrac_glitch_staged_products}
             -P "${CMAKE_CURRENT_SOURCE_DIR}/cmake/WriteArtifactsManifest.cmake")
