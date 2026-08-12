@@ -15,6 +15,26 @@ void require(bool condition, const char* message)
         std::exit(1);
     }
 }
+
+bool isCloseTo(juce::Colour actual, juce::Colour expected)
+{
+    constexpr int channelTolerance = 1;
+    return actual.getAlpha() == expected.getAlpha()
+           && std::abs(actual.getRed() - expected.getRed()) <= channelTolerance
+           && std::abs(actual.getGreen() - expected.getGreen()) <= channelTolerance
+           && std::abs(actual.getBlue() - expected.getBlue()) <= channelTolerance;
+}
+
+int countClosePixels(const juce::Image& image, juce::Rectangle<int> area,
+                     juce::Colour expected)
+{
+    int count = 0;
+    for (int y = area.getY(); y < area.getBottom(); ++y)
+        for (int x = area.getX(); x < area.getRight(); ++x)
+            if (isCloseTo(image.getPixelAt(x, y), expected))
+                ++count;
+    return count;
+}
 } // namespace
 
 int main()
@@ -43,10 +63,15 @@ int main()
     juce::Image image(juce::Image::RGB, editor->getWidth(), editor->getHeight(), true);
     juce::Graphics graphics(image);
     editor->paint(graphics);
-    require(image.getPixelAt(0, 2) == ehl::juce_design::Palette::paper(),
+    const auto chromeProbe = editor->getLocalBounds().reduced(ehl::juce_design::Metrics::margin, 0);
+    const auto topRuleProbe = chromeProbe.withY(1).withHeight(2);
+    require(countClosePixels(image, topRuleProbe, ehl::juce_design::Palette::paper())
+                == topRuleProbe.getWidth() * topRuleProbe.getHeight(),
             "shared EHL top rule is missing");
-    require(image.getPixelAt(0, ehl::juce_design::Metrics::headerHeight + 4)
-                == ehl::juce_design::Palette::ink(),
+    const auto bodyProbe = chromeProbe.withY(ehl::juce_design::Metrics::headerHeight + 4)
+                           .withHeight(2);
+    require(countClosePixels(image, bodyProbe, ehl::juce_design::Palette::ink())
+                == bodyProbe.getWidth() * bodyProbe.getHeight(),
             "editor body is not EHL ink");
 
     return 0;
