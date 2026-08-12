@@ -71,8 +71,10 @@ int main()
             "parameter viewport must remain inside the compact editor");
 
     juce::Image image(juce::Image::RGB, editor->getWidth(), editor->getHeight(), true);
-    juce::Graphics graphics(image);
-    editor->paint(graphics);
+    {
+        juce::Graphics graphics(image);
+        editor->paint(graphics);
+    }
     const auto chromeProbe = editor->getLocalBounds().reduced(ehl::juce_design::Metrics::margin, 0);
     const auto topRuleProbe = chromeProbe.withY(1).withHeight(2);
     require(countMatchingPixels(image, topRuleProbe, isPaperTone)
