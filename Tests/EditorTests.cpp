@@ -18,7 +18,9 @@ void require(bool condition, const char* message)
 
 bool isCloseTo(juce::Colour actual, juce::Colour expected)
 {
-    constexpr int channelTolerance = 1;
+    // Offscreen RGB backends may differ by two codes on the near-white paper
+    // channels; this remains far below the smallest EHL palette gap.
+    constexpr int channelTolerance = 2;
     return actual.getAlpha() == expected.getAlpha()
            && std::abs(actual.getRed() - expected.getRed()) <= channelTolerance
            && std::abs(actual.getGreen() - expected.getGreen()) <= channelTolerance
