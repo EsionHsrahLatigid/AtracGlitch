@@ -54,19 +54,35 @@ if(ATRAC_GLITCH_BUILD_PLUGIN)
         list(APPEND ATRAC_GLITCH_FORMATS AU)
     endif()
 
+    set(EHL_COPY_PLUGIN_AFTER_BUILD_DEFAULT OFF)
+    if(APPLE AND NOT DEFINED ENV{CI})
+        set(EHL_COPY_PLUGIN_AFTER_BUILD_DEFAULT ON)
+    endif()
+    option(EHL_COPY_PLUGIN_AFTER_BUILD
+        "Copy built plug-in formats to the current user's standard plug-in folders"
+        ${EHL_COPY_PLUGIN_AFTER_BUILD_DEFAULT})
+
+    set(EHL_PLUGIN_COPY_ARGS
+        COPY_PLUGIN_AFTER_BUILD ${EHL_COPY_PLUGIN_AFTER_BUILD})
+    if(APPLE)
+        list(APPEND EHL_PLUGIN_COPY_ARGS
+            VST3_COPY_DIR "$ENV{HOME}/Library/Audio/Plug-Ins/VST3"
+            AU_COPY_DIR "$ENV{HOME}/Library/Audio/Plug-Ins/Components")
+    endif()
+
     juce_add_plugin(AtracGlitch
-        COMPANY_NAME "2bit"
+        COMPANY_NAME "EsionHsrahLatigid"
         BUNDLE_ID "jp.ehl.atracglitch"
-        PLUGIN_MANUFACTURER_CODE Tbit
+        PLUGIN_MANUFACTURER_CODE EHL_
         PLUGIN_CODE Atg1
         FORMATS ${ATRAC_GLITCH_FORMATS}
-        PRODUCT_NAME "ATRAC Glitch"
+        PRODUCT_NAME "AtracGlitch"
         IS_SYNTH FALSE
         NEEDS_MIDI_INPUT FALSE
         NEEDS_MIDI_OUTPUT FALSE
         IS_MIDI_EFFECT FALSE
         EDITOR_WANTS_KEYBOARD_FOCUS TRUE
-        COPY_PLUGIN_AFTER_BUILD FALSE
+        ${EHL_PLUGIN_COPY_ARGS}
     )
 
     target_sources(AtracGlitch PRIVATE
@@ -121,21 +137,21 @@ if(ATRAC_GLITCH_BUILD_PLUGIN)
             COMMAND ${CMAKE_COMMAND} -E rm -rf "${atrac_glitch_staged_products}/vst3/atracglitch_vst3_plugin.vst3"
             COMMAND ${CMAKE_COMMAND} -E rm -rf "${atrac_glitch_staged_products}/standalone/atracglitch_standalone_plugin.app"
             COMMAND ${CMAKE_COMMAND} -E rm -rf "${atrac_glitch_staged_products}/au/atracglitch_au_plugin.component"
-            COMMAND ${CMAKE_COMMAND} -E copy_directory "${atrac_glitch_juce_products}/VST3/ATRAC Glitch.vst3" "${atrac_glitch_staged_products}/vst3/atracglitch_vst3_plugin.vst3"
-            COMMAND ${CMAKE_COMMAND} -E copy_directory "${atrac_glitch_juce_products}/Standalone/ATRAC Glitch.app" "${atrac_glitch_staged_products}/standalone/atracglitch_standalone_plugin.app"
-            COMMAND ${CMAKE_COMMAND} -E copy_directory "${atrac_glitch_juce_products}/AU/ATRAC Glitch.component" "${atrac_glitch_staged_products}/au/atracglitch_au_plugin.component"
+            COMMAND ${CMAKE_COMMAND} -E copy_directory "${atrac_glitch_juce_products}/VST3/AtracGlitch.vst3" "${atrac_glitch_staged_products}/vst3/atracglitch_vst3_plugin.vst3"
+            COMMAND ${CMAKE_COMMAND} -E copy_directory "${atrac_glitch_juce_products}/Standalone/AtracGlitch.app" "${atrac_glitch_staged_products}/standalone/atracglitch_standalone_plugin.app"
+            COMMAND ${CMAKE_COMMAND} -E copy_directory "${atrac_glitch_juce_products}/AU/AtracGlitch.component" "${atrac_glitch_staged_products}/au/atracglitch_au_plugin.component"
             COMMAND codesign --force --deep --sign - "${atrac_glitch_staged_products}/vst3/atracglitch_vst3_plugin.vst3"
             COMMAND codesign --force --deep --sign - "${atrac_glitch_staged_products}/standalone/atracglitch_standalone_plugin.app"
             COMMAND codesign --force --deep --sign - "${atrac_glitch_staged_products}/au/atracglitch_au_plugin.component")
     elseif(WIN32)
         list(APPEND atrac_glitch_stage_commands
             COMMAND ${CMAKE_COMMAND} -E rm -rf "${atrac_glitch_staged_products}/vst3/atracglitch_vst3_plugin.vst3"
-            COMMAND ${CMAKE_COMMAND} -E copy_directory "${atrac_glitch_juce_products}/VST3/ATRAC Glitch.vst3" "${atrac_glitch_staged_products}/vst3/atracglitch_vst3_plugin.vst3"
-            COMMAND ${CMAKE_COMMAND} -E copy "${atrac_glitch_juce_products}/Standalone/ATRAC Glitch.exe" "${atrac_glitch_staged_products}/standalone/atracglitch_standalone_plugin.exe")
+            COMMAND ${CMAKE_COMMAND} -E copy_directory "${atrac_glitch_juce_products}/VST3/AtracGlitch.vst3" "${atrac_glitch_staged_products}/vst3/atracglitch_vst3_plugin.vst3"
+            COMMAND ${CMAKE_COMMAND} -E copy "${atrac_glitch_juce_products}/Standalone/AtracGlitch.exe" "${atrac_glitch_staged_products}/standalone/atracglitch_standalone_plugin.exe")
     else()
         list(APPEND atrac_glitch_stage_commands
-            COMMAND ${CMAKE_COMMAND} -E copy_directory "${atrac_glitch_juce_products}/VST3/ATRAC Glitch.vst3" "${atrac_glitch_staged_products}/vst3/atracglitch_vst3_plugin.vst3"
-            COMMAND ${CMAKE_COMMAND} -E copy "${atrac_glitch_juce_products}/Standalone/ATRAC Glitch" "${atrac_glitch_staged_products}/standalone/atracglitch_standalone_plugin")
+            COMMAND ${CMAKE_COMMAND} -E copy_directory "${atrac_glitch_juce_products}/VST3/AtracGlitch.vst3" "${atrac_glitch_staged_products}/vst3/atracglitch_vst3_plugin.vst3"
+            COMMAND ${CMAKE_COMMAND} -E copy "${atrac_glitch_juce_products}/Standalone/AtracGlitch" "${atrac_glitch_staged_products}/standalone/atracglitch_standalone_plugin")
     endif()
 
     list(APPEND atrac_glitch_stage_commands
@@ -211,7 +227,7 @@ if(ATRAC_GLITCH_BUILD_TESTS)
         add_test(NAME AtracGlitch.Host.VST3
             COMMAND AtracGlitchPluginLoadTests
                 "$<TARGET_BUNDLE_DIR:AtracGlitch_VST3>"
-                "ATRAC Glitch"
+            "AtracGlitch"
         )
         add_test(
             NAME AtracGlitch.ArtifactChecks

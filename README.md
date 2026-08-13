@@ -1,11 +1,23 @@
-# ATRAC Glitch
+# AtracGlitch
 
-ATRAC Glitch is a JUCE audio effect that converts incoming PCM into a fixed-size,
+AtracGlitch is a JUCE audio effect that converts incoming PCM into a fixed-size,
 ATRAC1-structured transform frame, mutates meaningful compressed-domain fields,
 then decodes the result back to audio.
 
 The current plug-in builds as VST3, Audio Unit (macOS), and Standalone. It has a
 dependency-free DSP core and does not launch FFmpeg from the audio thread.
+
+## Identity
+
+- Company: EsionHsrahLatigid
+- Manufacturer code: EHL_
+- Plug-in code: Atg1
+- Bundle ID: jp.ehl.atracglitch
+- Formats: VST3, Standalone, and AU on macOS
+
+This is an identity migration from the earlier `2bit` / `Tbit` manufacturer
+identity into the EHL namespace. `PLUGIN_CODE` remains `Atg1` to preserve the
+plug-in code portion of the host identity.
 
 ## What is implemented
 
@@ -56,6 +68,22 @@ cmake -S . -B build -G Ninja \
 cmake --build build
 ctest --test-dir build --output-on-failure
 ```
+
+Build `ehl_stage_products` to write release-staged products under:
+
+- `artifacts/plugin-release/macos-arm64/` on macOS
+- `artifacts/plugin-release/windows-x64/` on Windows
+- `artifacts/plugin-release/linux-x64/` on Linux
+
+On local macOS builds outside CI, VST3 and AU bundles are also copied after
+build to the current user's standard plug-in folders:
+
+- `~/Library/Audio/Plug-Ins/VST3`
+- `~/Library/Audio/Plug-Ins/Components`
+
+Standalone products remain only in the build or staged artifact tree; they are
+not copied under `Audio/Plug-Ins`. CI and non-macOS builds default this copying
+off. Override explicitly with `-DEHL_COPY_PLUGIN_AFTER_BUILD=ON|OFF`.
 
 For a core-only build, JUCE is not required:
 
